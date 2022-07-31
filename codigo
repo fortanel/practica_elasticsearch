@@ -1,0 +1,226 @@
+#Se crea al indice
+PUT log_consultas
+{
+  "mappings": {
+    "properties": {
+      "@timestamp": {
+        "type": "date"
+      },
+      "estado_consulta": {
+        "type": "text"
+      },
+      "servicio": {
+        "type": "text"
+      },
+      "administrador": {
+        "type": "text"
+      },
+      "consultas_realizadas": {
+        "type": "text"
+      }
+    }
+  }
+}
+
+#Se crea un index template
+PUT _index_template/log_consultas
+{
+  "index_patterns": ["log_consultas*"],
+  "template":{
+    "mappings": {
+      "properties": {
+        "@timestamp": {
+         "type": "date"
+        },
+        "administrador": {
+         "type": "text"
+        },
+        "consultas_realizadas": {
+         "type": "integer"
+        },
+        "estado_consulta": {
+         "type": "text"
+        },
+        "servicio": {
+         "type": "text"
+        }
+      }
+    }
+  }
+}
+
+#Codigo para cargar los datos, solo se agrego 3 datos
+POST _bulk
+{"index":{"_index":"log_consultas","_id":1}}
+{"@timestamp":"2010-05-15T22:00:54","estado_consulta":"consumo","servicio":"consulta","administrador":"Juan Carlos","consultas_realizadas":52}
+{"index":{"_index":"log_consultas","_id":2}}
+{"@timestamp":"2010-05-15T12:55:04","estado_consulta":"consumo","servicio":"modificacion","administrador":"Juan Lara","consultas_realizadas":10}
+{"index":{"_index":"log_consultas","_id":3}}
+{"@timestamp":"2010-05-15T14:56:48","estado_consulta":"consumo","servicio":"consulta","administrador":"Juan Lara","consultas_realizadas":20}
+
+
+
+#Primera solucion: Se obtiene el numero de registros por administrador
+Get log_consultas/_search
+{
+  "query":{
+    "term": {
+       "administrador": {
+         "value": "Juan Lara"
+       }
+    }
+  },
+  "size":0,
+  
+  "aggs": {
+    "consultas": {
+      "value_count":{
+        "field":"consultas_realizadas"
+      }
+    }
+  }
+}
+
+#Segunda solucion: Se obtiene el numero de registros por administrador
+Get log_consultas/_search
+{ "size":0,
+  "aggs": {
+    "Estado_Consultas": {
+      "categorize_text": {
+        "field": "administrador"
+      }
+    }
+  }
+}
+
+#Muestra como se crean pequeños tokens para los campos de texto
+GET /log_consultas/_analyze
+{
+  "field": "administrador",
+  "text": "Juan Lara"
+}
+#Se elimina el indice y templete
+Delete log_consultas
+De_index_template/log_consultaslete 
+
+#Se crea el nuevo indice con el nuevo mapping
+PUT log_consultas
+{
+  "mappings": {
+    "properties": {
+      "@timestamp": {
+        "type": "date"
+      },
+      "estado_consulta": {
+        "type": "keyword"
+      },
+      "servicio": {
+        "type": "keyword"
+      },
+      "administrador": {
+        "type": "keyword"
+      },
+      "consultas_realizadas": {
+        "type": "integer"
+      }
+    }
+  }
+}
+
+#Se crea el nuevo templete
+PUT _index_template/log_consultas
+{
+  "index_patterns": ["log_consultas*"],
+  "template":{
+    "mappings": {
+      "properties": {
+        "@timestamp": {
+         "type": "date"
+        },
+        "administrador": {
+         "type": "keyword"
+        },
+        "consultas_realizadas": {
+         "type": "integer"
+        },
+        "estado_consulta": {
+         "type": "keyword"
+        },
+        "servicio": {
+         "type": "keyword"
+        }
+      }
+    }
+  }
+}
+
+#Se vuelven a cargar los datos
+POST _bulk
+{"index":{"_index":"log_consultas","_id":1}}
+{"@timestamp":"2010-05-15T22:00:54","estado_consulta":"consumo","servicio":"consulta","administrador":"Juan Carlos","consultas_realizadas":52}
+{"index":{"_index":"log_consultas","_id":2}}
+{"@timestamp":"2010-05-15T12:55:04","estado_consulta":"consumo","servicio":"modificacion","administrador":"Juan Lara","consultas_realizadas":10}
+{"index":{"_index":"log_consultas","_id":3}}
+{"@timestamp":"2010-05-15T14:56:48","estado_consulta":"consumo","servicio":"consulta","administrador":"Juan Lara","consultas_realizadas":20}
+
+#Obtenemos los registros con Juan Lara
+Get log_consultas/_search
+{
+  "query":{
+    "term": {
+       "administrador": {
+         "value": "Juan Lara"
+       }
+    }
+  },
+  "size":0,
+  
+  "aggs": {
+    "consultas": {
+      "value_count":{
+        "field":"consultas_realizadas"
+      }
+    }
+  }
+}
+
+#Obtener el número de registros con estado_consulta igual a informativo y servicio igual a borrado
+Get log_consultas/_search
+{
+  "query":{
+    "bool": {
+      "must": [
+        {"term":{"estado_consulta": "informativo"}},
+        {"term":{"servicio": "borrado"}}
+      ]
+    }
+  },
+  "size":0,
+  
+  "aggs": {
+    "consultas": {
+      "value_count":{
+        "field":"consultas_realizadas"
+      }
+    }
+  }
+}
+
+#Se obtiene la suma de consultas realizadas con error.
+Get log_consultas/_search
+{
+  "query":{
+    "term": {
+       "estado_consulta": "error"
+    }
+  },
+  "size":0,
+  
+  "aggs": {
+    "consultas": {
+      "sum":{
+        "field":"consultas_realizadas"
+      }
+    }
+  }
+}
